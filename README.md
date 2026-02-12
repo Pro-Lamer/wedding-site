@@ -82,3 +82,13 @@ npm run dev:frontend
 - подключить реального провайдера ЕГРЮЛ и платежку,
 - добавить полноценную админку и роли moderator/admin,
 - довести до production-ready деплоя (CI/CD, observability, contract tests).
+
+## Если в браузере видите 404 по PWA/manifest
+
+Если ранее открывали старую сборку, браузер может держать старые PWA-запросы в кеше.
+
+1. Обновите страницу с очисткой кеша (`Ctrl+F5` / `Cmd+Shift+R`).
+2. Откройте DevTools → Application → Service Workers и нажмите `Unregister` (если есть).
+3. Перезапустите frontend dev server: `npm run dev:frontend`.
+
+В проекте добавлен валидный `manifest.webmanifest` и совместимый stub для `@vite-plugin-pwa/pwa-entry-point-loaded`.
