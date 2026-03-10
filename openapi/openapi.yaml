@@ -1,0 +1,520 @@
+openapi: 3.1.0
+info:
+  title: B2B MVP API
+  version: 1.0.0
+  description: API contract for MVP marketplace service
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      summary: Register company admin account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, inn]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                inn: { type: string, minLength: 10, maxLength: 12 }
+      responses:
+        '201': { description: Registered }
+  /auth/login:
+    post:
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      security: []
+      responses:
+        '200':
+          description: Tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+  /auth/logout:
+    post:
+      summary: Logout
+      responses:
+        '204': { description: Logged out }
+  /auth/verify-email:
+    post:
+      summary: Verify email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '204': { description: Verified }
+
+  /companies/verify-inn:
+    post:
+      summary: Fetch company preview by INN from registry provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inn]
+              properties:
+                inn: { type: string }
+      responses:
+        '200':
+          description: Registry preview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyRegistryPreview'
+  /companies/me:
+    get:
+      summary: Get own company profile
+      responses:
+        '200':
+          description: Company profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+    patch:
+      summary: Update own company profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyPatch'
+      responses:
+        '200': { description: Updated }
+  /companies/me/logo:
+    post:
+      summary: Upload company logo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201': { description: Uploaded }
+  /companies/{id}:
+    get:
+      summary: Public company profile (with gated contacts)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Company public profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+  /companies/{id}/unlock:
+    post:
+      summary: Unlock company contacts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contextType:
+                  type: string
+                  enum: [company, post]
+                contextId:
+                  type: string
+                  format: uuid
+                unlockType:
+                  type: string
+                  enum: [subscription, one_time]
+      responses:
+        '201': { description: Unlock created }
+
+  /posts:
+    post:
+      summary: Create post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostCreate'
+      responses:
+        '201': { description: Created }
+    get:
+      summary: List posts
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string, enum: [request, offer] }
+        - name: category
+          in: query
+          schema: { type: string, format: uuid }
+        - name: region
+          in: query
+          schema: { type: string }
+        - name: budget_min
+          in: query
+          schema: { type: number }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, hidden, archived] }
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [created_desc, created_asc] }
+        - name: cursor
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Post list }
+  /posts/{id}:
+    get:
+      summary: Get post by id
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: Post }
+    patch:
+      summary: Update post
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPatch'
+      responses:
+        '200': { description: Updated }
+  /posts/{id}/hide:
+    post:
+      summary: Hide post
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Hidden }
+  /posts/{id}/archive:
+    post:
+      summary: Archive post
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Archived }
+
+  /posts/{id}/responses:
+    post:
+      summary: Create response for post
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResponseCreate'
+      responses:
+        '201': { description: Created }
+    get:
+      summary: List responses for post (post owner only)
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: Response list }
+
+  /responses/{id}:
+    get:
+      summary: Get response with message thread
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: Response details }
+  /responses/{id}/messages:
+    post:
+      summary: Add message in response thread
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 5000 }
+      responses:
+        '201': { description: Created }
+
+  /reviews:
+    post:
+      summary: Create review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '201': { description: Created }
+  /companies/{id}/reviews:
+    get:
+      summary: List company reviews
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { description: Review list }
+  /admin/reviews/{id}:
+    patch:
+      summary: Moderate review status
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, published, rejected]
+      responses:
+        '200': { description: Updated }
+
+  /reports:
+    post:
+      summary: Create report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, targetId, reason]
+              properties:
+                targetType:
+                  type: string
+                  enum: [company, post, response, review]
+                targetId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                comment:
+                  type: string
+      responses:
+        '201': { description: Created }
+  /admin/reports:
+    get:
+      summary: List reports
+      responses:
+        '200': { description: Report list }
+  /admin/reports/{id}:
+    patch:
+      summary: Update report status
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [new, in_progress, resolved]
+      responses:
+        '200': { description: Updated }
+  /admin/actions:
+    post:
+      summary: Create moderation action
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actionType, targetType, targetId]
+              properties:
+                actionType: { type: string }
+                targetType:
+                  type: string
+                  enum: [company, post, response, review]
+                targetId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+      responses:
+        '201': { description: Created }
+
+  /webhooks/payments/{provider}:
+    post:
+      summary: Payment provider webhook (signature validated, idempotent)
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Processed }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    TokenPair:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+      required: [accessToken, refreshToken]
+    CompanyRegistryPreview:
+      type: object
+      properties:
+        full_name: { type: string }
+        short_name: { type: string }
+        ogrn: { type: string }
+        inn: { type: string }
+        kpp: { type: string }
+        status: { type: string }
+        reg_date: { type: string, format: date }
+        legal_address: { type: string }
+        okved_main: { type: string }
+        okved_additional:
+          type: array
+          items: { type: string }
+    Company:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        inn: { type: string }
+        nameFull: { type: string }
+        nameShort: { type: string }
+        verificationLevel:
+          type: string
+          enum: [L1_registry, L2_email_verified, L3_manual]
+        regionCode: { type: string }
+        description: { type: string }
+        website: { type: string }
+        contactsEmail:
+          type: [string, 'null']
+        contactsPhone:
+          type: [string, 'null']
+    CompanyPatch:
+      type: object
+      properties:
+        description: { type: string, maxLength: 5000 }
+        website: { type: string }
+        regionCode: { type: string }
+        contactsEmail: { type: string, format: email }
+        contactsPhone: { type: string }
+    PostCreate:
+      type: object
+      required: [type, title, description, categoryId]
+      properties:
+        type: { type: string, enum: [request, offer] }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+        categoryId: { type: string, format: uuid }
+        budgetMin: { type: number }
+        budgetMax: { type: number }
+        currency: { type: string, enum: [RUB], default: RUB }
+        regionCode: { type: string }
+        remoteFlag: { type: boolean, default: false }
+        deadlineDate: { type: string, format: date }
+    PostPatch:
+      type: object
+      properties:
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+        budgetMin: { type: number }
+        budgetMax: { type: number }
+        regionCode: { type: string }
+        remoteFlag: { type: boolean }
+        deadlineDate: { type: string, format: date }
+        status: { type: string, enum: [active, hidden, archived] }
+    ResponseCreate:
+      type: object
+      required: [message]
+      properties:
+        price: { type: number }
+        timelineDays: { type: integer, minimum: 1 }
+        message: { type: string, maxLength: 5000 }
+        attachments:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            format: uri
+    ReviewCreate:
+      type: object
+      required: [to_company_id, contact_unlock_id, rating_quality, rating_timing, rating_communication]
+      properties:
+        to_company_id: { type: string, format: uuid }
+        contact_unlock_id: { type: string, format: uuid }
+        rating_quality: { type: integer, minimum: 1, maximum: 5 }
+        rating_timing: { type: integer, minimum: 1, maximum: 5 }
+        rating_communication: { type: integer, minimum: 1, maximum: 5 }
+        text: { type: string, maxLength: 2000 }

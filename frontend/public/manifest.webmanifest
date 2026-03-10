@@ -1,0 +1,10 @@
+{
+  "name": "Wedding B2B MVP",
+  "short_name": "WeddingMVP",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#111827",
+  "lang": "ru",
+  "description": "MVP B2B платформы для свадебного рынка"
+}
